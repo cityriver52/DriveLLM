@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DriveLLM Diagnostics</title>
+    <?!= include('stylesheet'); ?>
+  </head>
+  <body>
+    <main class="page">
+      <header class="page-header">
+        <p class="eyebrow">DriveLLM · Phase 0</p>
+        <h1>環境診断</h1>
+        <p class="intro">この画面はブラウザーの機能を確認します。診断結果は保存・送信しません。</p>
+      </header>
+
+      <section class="summary" aria-live="polite" aria-atomic="true">
+        <div>
+          <p class="summary-label">診断結果</p>
+          <p id="overall-status" class="summary-value">確認中…</p>
+        </div>
+        <button id="refresh-button" class="refresh-button" type="button">再確認</button>
+      </section>
+
+      <section class="diagnostics" aria-label="診断項目">
+        <article class="diagnostic-row">
+          <div><h2>ブラウザー</h2><p id="browser-detail" class="detail">—</p></div>
+          <span id="browser-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>セキュアコンテキスト</h2><p id="secure-detail" class="detail">—</p></div>
+          <span id="secure-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>WebGPU</h2><p id="webgpu-detail" class="detail">—</p></div>
+          <span id="webgpu-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>GPU adapter</h2><p id="adapter-detail" class="detail">—</p></div>
+          <span id="adapter-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>WebAssembly</h2><p id="wasm-detail" class="detail">—</p></div>
+          <span id="wasm-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>IndexedDB</h2><p id="indexeddb-detail" class="detail">—</p></div>
+          <span id="indexeddb-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>Cache Storage</h2><p id="cache-detail" class="detail">—</p></div>
+          <span id="cache-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>端末メモリ</h2><p id="memory-detail" class="detail">—</p></div>
+          <span id="memory-status" class="status status-pending">確認中…</span>
+        </article>
+        <article class="diagnostic-row">
+          <div><h2>GAS HTML Service</h2><p id="gas-detail" class="detail">—</p></div>
+          <span id="gas-status" class="status status-pending">確認中…</span>
+        </article>
+      </section>
+
+      <footer class="page-footer">
+        <p>この診断では、ブラウザー機能の有無だけを確認します。モデル推論やDriveへのアクセスは行いません。</p>
+      </footer>
+    </main>
+    <script><?!= include('javascript'); ?></script>
+  </body>
+</html>

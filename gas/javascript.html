@@ -1,0 +1,157 @@
+(function () {
+  const rows = [
+    'browser', 'secure', 'webgpu', 'adapter', 'wasm',
+    'indexeddb', 'cache', 'memory', 'gas'
+  ];
+
+  function setResult(id, state, label, detail) {
+    const status = document.getElementById(id + '-status');
+    const description = document.getElementById(id + '-detail');
+    status.textContent = label;
+    status.className = 'status status-' + state;
+    description.textContent = detail || '';
+  }
+
+  function detectBrowser() {
+    const ua = navigator.userAgent || '';
+    const patterns = [
+      ['Microsoft Edge', /Edg\/([\d.]+)/],
+      ['Opera', /OPR\/([\d.]+)/],
+      ['Google Chrome', /(?:Chrome|CriOS)\/([\d.]+)/],
+      ['Firefox', /(?:Firefox|FxiOS)\/([\d.]+)/],
+      ['Safari', /Version\/([\d.]+).*Safari/]
+    ];
+
+    for (const [name, pattern] of patterns) {
+      const match = ua.match(pattern);
+      if (match) return name + ' ' + match[1].split('.')[0];
+    }
+    return 'ブラウザーを特定できません';
+  }
+
+  async function checkWebGpu() {
+    if (!navigator.gpu || typeof navigator.gpu.requestAdapter !== 'function') {
+      return {
+        available: false,
+        detail: 'navigator.gpu が利用できません。Chromeのバージョン、セキュアコンテキスト、組織のポリシーを確認してください。'
+      };
+    }
+
+    try {
+      const adapter = await navigator.gpu.requestAdapter();
+      if (!adapter) {
+        return {
+          available: false,
+          detail: 'navigator.gpu はありますが、GPU adapter を取得できませんでした。'
+        };
+      }
+
+      const info = adapter.info || {};
+      const adapterName = [info.description, info.device, info.architecture, info.vendor]
+        .find((value) => typeof value === 'string' && value.trim());
+      return {
+        available: true,
+        adapter: adapterName || '詳細情報はブラウザーから公開されていません。'
+      };
+    } catch (error) {
+      return {
+        available: false,
+        detail: 'GPU adapter の確認中にエラーが発生しました: ' + errorMessage(error)
+      };
+    }
+  }
+
+  function errorMessage(error) {
+    if (error && typeof error.message === 'string' && error.message) return error.message;
+    return '詳細を取得できません';
+  }
+
+  function hasWebAssembly() {
+    if (!window.WebAssembly || typeof WebAssembly.validate !== 'function') return false;
+    return WebAssembly.validate(new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]));
+  }
+
+  function finishOverall() {
+    const failed = rows.some((id) => {
+      const status = document.getElementById(id + '-status');
+      return status.classList.contains('status-error');
+    });
+    const pending = rows.some((id) => {
+      const status = document.getElementById(id + '-status');
+      return status.classList.contains('status-pending');
+    });
+    const overall = document.getElementById('overall-status');
+    overall.textContent = pending ? '確認中…' : failed ? '一部の機能が利用できません' : '診断が完了しました';
+  }
+
+  async function runDiagnostics() {
+    const button = document.getElementById('refresh-button');
+    button.disabled = true;
+    document.getElementById('overall-status').textContent = '確認中…';
+    rows.forEach((id) => setResult(id, 'pending', '確認中…', ''));
+
+    const browser = detectBrowser();
+    setResult('browser', 'ok', '確認済み', browser);
+
+    const secure = typeof window.isSecureContext === 'boolean' && window.isSecureContext;
+    setResult(
+      'secure',
+      secure ? 'ok' : 'error',
+      secure ? '有効' : '無効',
+      secure ? 'セキュアコンテキストで実行されています。' : 'WebGPUにはHTTPSなどのセキュアコンテキストが必要です。'
+    );
+
+    const gasScript = window.google && window.google.script;
+    if (gasScript) {
+      const sandboxMode = gasScript.sandbox && gasScript.sandbox.mode;
+      setResult('gas', 'ok', '有効', 'Apps Script HTML Service' + (sandboxMode ? ' · ' + sandboxMode + ' sandbox' : ''));
+    } else {
+      setResult('gas', 'error', '確認できません', 'google.script が見つかりません。GAS HTML Serviceから開いているか確認してください。');
+    }
+
+    const wasmAvailable = hasWebAssembly();
+    setResult(
+      'wasm',
+      wasmAvailable ? 'ok' : 'error',
+      wasmAvailable ? '利用可能' : '利用不可',
+      wasmAvailable ? 'WebAssemblyモジュールの検証に成功しました。' : 'WebAssemblyを利用できません。'
+    );
+
+    const indexedDbAvailable = !!(window.indexedDB && typeof window.indexedDB.open === 'function');
+    setResult(
+      'indexeddb',
+      indexedDbAvailable ? 'ok' : 'error',
+      indexedDbAvailable ? 'API利用可能' : '利用不可',
+      indexedDbAvailable ? 'ブラウザーがIndexedDB APIを提供しています。保存容量や書き込みは確認していません。' : 'IndexedDB APIを利用できません。'
+    );
+
+    const cacheAvailable = !!(window.caches && typeof window.caches.open === 'function');
+    setResult(
+      'cache',
+      cacheAvailable ? 'ok' : 'error',
+      cacheAvailable ? 'API利用可能' : '利用不可',
+      cacheAvailable ? 'ブラウザーがCache Storage APIを提供しています。保存容量や書き込みは確認していません。' : 'Cache Storage APIを利用できません。'
+    );
+
+    if (typeof navigator.deviceMemory === 'number') {
+      setResult('memory', 'ok', '取得可能', '端末メモリの概算: ' + navigator.deviceMemory + ' GB');
+    } else {
+      setResult('memory', 'warn', '取得できません', 'このブラウザーは端末メモリ情報を公開していません。');
+    }
+
+    const gpuResult = await checkWebGpu();
+    if (gpuResult.available) {
+      setResult('webgpu', 'ok', '利用可能', 'navigator.gpu からGPU adapterを取得できました。');
+      setResult('adapter', 'ok', '取得済み', gpuResult.adapter);
+    } else {
+      setResult('webgpu', 'error', '利用不可', gpuResult.detail);
+      setResult('adapter', 'error', '取得できません', gpuResult.detail);
+    }
+
+    finishOverall();
+    button.disabled = false;
+  }
+
+  document.getElementById('refresh-button').addEventListener('click', runDiagnostics);
+  runDiagnostics();
+})();
